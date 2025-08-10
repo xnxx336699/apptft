@@ -1,7 +1,10 @@
-name: Build APK (unsigned) — TFTOverlay V4
+name: Build APK (debug) — TFTOverlay V4
 
 on:
   workflow_dispatch:
+
+env:
+  PROJECT_DIR: TFTOverlay   # <— nếu thư mục dự án của ba tên khác, đổi lại ở đây
 
 jobs:
   build:
@@ -10,6 +13,18 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+
+      - name: Show repo tree (debug)
+        run: |
+          pwd
+          ls -la
+          echo "---- Inside PROJECT_DIR ----"
+          ls -la "$PROJECT_DIR"
+
+      - name: Verify project structure
+        run: |
+          test -f "$PROJECT_DIR/settings.gradle.kts" || { echo "❌ Không thấy $PROJECT_DIR/settings.gradle.kts"; exit 1; }
+          test -d "$PROJECT_DIR/app" || { echo "❌ Không thấy thư mục $PROJECT_DIR/app"; exit 1; }
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -27,6 +42,7 @@ jobs:
         run: sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
 
       - name: Ensure Gradle wrapper
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
           if [ ! -f "./gradlew" ]; then
             sudo apt-get update && sudo apt-get install -y gradle
@@ -35,11 +51,12 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --version
 
-      - name: Build release (unsigned)
-        run: ./gradlew --no-daemon assembleRelease
+      - name: Build debug APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: ./gradlew --no-daemon assembleDebug
 
-      - name: Upload unsigned APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: TFTOverlay-release-unsigned
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          name: TFTOverlay-debug
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
