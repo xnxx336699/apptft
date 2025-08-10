@@ -1,0 +1,45 @@
+name: Build APK (unsigned) — TFTOverlay V4
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept all SDK licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Install SDK packages
+        run: sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+
+      - name: Ensure Gradle wrapper
+        run: |
+          if [ ! -f "./gradlew" ]; then
+            sudo apt-get update && sudo apt-get install -y gradle
+            gradle wrapper --gradle-version 8.7
+          fi
+          chmod +x ./gradlew
+          ./gradlew --version
+
+      - name: Build release (unsigned)
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Upload unsigned APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TFTOverlay-release-unsigned
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
